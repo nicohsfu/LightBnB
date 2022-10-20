@@ -100,6 +100,7 @@ exports.addUser = addUser;
  * @param {string} guest_id The id of the user.
  * @return {Promise<[{}]>} A promise to the reservations.
  */
+// refactored code #5
 const getAllReservations = function(guest_id, limit = 10) {
   const query = `
   SELECT reservations.*, properties.*, AVG(rating) as average_rating
@@ -112,15 +113,6 @@ const getAllReservations = function(guest_id, limit = 10) {
   LIMIT $2;
   `;
 
-// SELECT reservations.id, properties.title, properties.cost_per_night, reservations.start_date, avg(rating) as average_rating
-// FROM reservations
-// JOIN properties ON reservations.property_id = properties.id
-// JOIN property_reviews ON properties.id = property_reviews.property_id
-// WHERE reservations.guest_id = 1
-// GROUP BY properties.id, reservations.id
-// ORDER BY reservations.start_date
-// LIMIT 10;
-
   return pool
     .query(query, [guest_id, limit])
     .then((result) => result.rows
@@ -131,6 +123,7 @@ const getAllReservations = function(guest_id, limit = 10) {
 };
 exports.getAllReservations = getAllReservations;
 
+// old code #5
 // const getAllReservations = function(guest_id, limit = 10) {
 //   return getAllProperties(null, 2);
 // };
@@ -143,19 +136,87 @@ exports.getAllReservations = getAllReservations;
  * @param {*} limit The number of results to return.
  * @return {Promise<[{}]>}  A promise to the properties.
  */
-// refactored code #1 - now we're using the lighthouse database with promise
-const getAllProperties = (options, limit = 10) => {
+// refactored code #1 version 2
+const getAllProperties = function(options, limit = 10) {
+  //1
+  const queryParams = [];
+  //2
+  let queryString = `
+ SELECT properties.*, avg(property_reviews.rating) as average_rating
+ FROM properties
+ LEFT JOIN property_reviews ON properties.id = property_id
+ `;
+  //3
+  if (options.owner_id) {
+    queryParams.push(options.owner_id);
+    if (queryParams.length === 1) {
+      queryString += `WHERE owner_id = $${queryParams.length} `;
+    } else {
+      queryString += `AND owner_id = $${queryParams.length} `;
+    }
+  }
+  if (options.city) {
+    queryParams.push(`%${options.city}%`);
+    if (queryParams.length === 1) {
+      queryString += `WHERE city LIKE $${queryParams.length} `;
+    } else {
+      queryString += `AND city LIKE $${queryParams.length} `;
+
+    }
+  }
+  if (options.minimum_price_per_night) {
+    queryParams.push(options.minimum_price_per_night * 100);
+    if (queryParams.length === 1) {
+      queryString += `WHERE cost_per_night >= $${queryParams.length} `;
+    } else {
+      queryString += `AND cost_per_night >= $${queryParams.length} `;
+    }
+  }
+  if (options.maximum_price_per_night) {
+    queryParams.push(options.maximum_price_per_night * 100);
+    if (queryParams.length === 1) {
+      queryString += `WHERE cost_per_night <= $${queryParams.length} `;
+    } else {
+      queryString += `AND cost_per_night <= $${queryParams.length} `;
+    }
+  }
+  //4
+  queryString += `
+ GROUP BY properties.id
+ `;
+  if (options.minimum_rating) {
+    queryParams.push(options.minimum_rating);
+    queryString += `HAVING avg(property_reviews.rating) >= $${queryParams.length} `;
+  }
+  queryParams.push(limit);
+  queryString += `
+ ORDER BY cost_per_night
+ LIMIT $${queryParams.length};
+ `;
+  //5
+  console.log(queryString, queryParams);
+  //6
   return pool
-    .query(`SELECT * FROM properties LIMIT $1`, [limit])
-    .then((result) => {
-      console.log(result.rows);
-      return result.rows;
-    })
-    .catch((err) => {
-      console.log(err.message);
-    });
+    .query(queryString, queryParams)
+    .then((result) => { return result.rows; })
+    .catch((err) => console.log(err.message));
 };
+
 exports.getAllProperties = getAllProperties;
+
+
+// refactored code #1 version 1 - now we're using the lighthouse database with promise
+// const getAllProperties = (options, limit = 10) => {
+//   return pool
+//     .query(`SELECT * FROM properties LIMIT $1`, [limit])
+//     .then((result) => {
+//       console.log(result.rows);
+//       return result.rows;
+//     })
+//     .catch((err) => {
+//       console.log(err.message);
+//     });
+// };
 
 // old code #1 - before refactoring it to use lightbnb database
 // const getAllProperties = function(options, limit = 10) {
@@ -171,6 +232,10 @@ exports.getAllProperties = getAllProperties;
  * @param {{}} property An object containing all of the property details.
  * @return {Promise<{}>} A promise to the property.
  */
+// refactored code #6
+
+
+// old code #6 of 6
 const addProperty = function(property) {
   const propertyId = Object.keys(properties).length + 1;
   property.id = propertyId;
