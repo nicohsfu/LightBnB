@@ -19,43 +19,79 @@ const pool = new Pool({
  * @param {String} email The email of the user.
  * @return {Promise<{}>} A promise to the user.
  */
-const getUserWithEmail = function(email) {
-  let user;
-  for (const userId in users) {
-    user = users[userId];
-    if (user.email.toLowerCase() === email.toLowerCase()) {
-      break;
-    } else {
-      user = null;
-    }
-  }
-  return Promise.resolve(user);
+// refactored code #2
+const getUserWithEmail = (email) => {
+  return pool
+    .query(`SELECT * FROM users WHERE email = $1`, [email])
+    .then((result) => {
+      console.log(result.rows[0]);
+      return result.rows[0];
+    })
+    .catch(() => {
+      return null;
+    });
 };
 exports.getUserWithEmail = getUserWithEmail;
+
+// old code #2
+// const getUserWithEmail = function(email) {
+//   let user;
+//   for (const userId in users) {
+//     user = users[userId];
+//     if (user.email.toLowerCase() === email.toLowerCase()) {
+//       break;
+//     } else {
+//       user = null;
+//     }
+//   }
+//   return Promise.resolve(user);
+// };
 
 /**
  * Get a single user from the database given their id.
  * @param {string} id The id of the user.
  * @return {Promise<{}>} A promise to the user.
  */
-const getUserWithId = function(id) {
-  return Promise.resolve(users[id]);
+
+// refactored code #3
+const getUserWithId = (id) => {
+  return pool
+    .query(`SELECT * FROM users WHERE id = $1`, [id])
+    .then((result) => {
+      return result.rows[0];
+    })
+    .catch(() => {
+      return null;
+    });
 };
 exports.getUserWithId = getUserWithId;
 
+// old code #3
+// const getUserWithId = function(id) {
+//   return Promise.resolve(users[id]);
+// };
 
 /**
  * Add a new user to the database.
  * @param {{name: string, password: string, email: string}} user
  * @return {Promise<{}>} A promise to the user.
  */
+// refactored code #4
 const addUser = function(user) {
-  const userId = Object.keys(users).length + 1;
-  user.id = userId;
-  users[userId] = user;
-  return Promise.resolve(user);
+  const { name, password, email } = user;
+  return pool.query(`INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *;`, [name, email, password])
+    .then(result => result.rows[0])
+    .catch(err => console.log(err.message));
 };
 exports.addUser = addUser;
+
+// old code #4
+// const addUser = function(user) {
+//   const userId = Object.keys(users).length + 1;
+//   user.id = userId;
+//   users[userId] = user;
+//   return Promise.resolve(user);
+// };
 
 /// Reservations
 
@@ -77,8 +113,7 @@ exports.getAllReservations = getAllReservations;
  * @param {*} limit The number of results to return.
  * @return {Promise<[{}]>}  A promise to the properties.
  */
-
-// refactored code below - now we're using the lighthouse database with promise
+// refactored code #1 - now we're using the lighthouse database with promise
 const getAllProperties = (options, limit = 10) => {
   return pool
     .query(`SELECT * FROM properties LIMIT $1`, [limit])
@@ -92,7 +127,7 @@ const getAllProperties = (options, limit = 10) => {
 };
 exports.getAllProperties = getAllProperties;
 
-// old code below - before refactoring it to use lightbnb database
+// old code #1 - before refactoring it to use lightbnb database
 // const getAllProperties = function(options, limit = 10) {
 //   const limitedProperties = {};  
 //   for (let i = 1; i <= limit; i++) {
