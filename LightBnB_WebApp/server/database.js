@@ -158,9 +158,9 @@ const getAllProperties = function(options, limit = 10) {
   if (options.city) {
     queryParams.push(`%${options.city}%`);
     if (queryParams.length === 1) {
-      queryString += `WHERE city LIKE $${queryParams.length} `;
+      queryString += `WHERE city ILIKE $${queryParams.length} `;
     } else {
-      queryString += `AND city LIKE $${queryParams.length} `;
+      queryString += `AND city ILIKE $${queryParams.length} `;
 
     }
   }
@@ -233,13 +233,73 @@ exports.getAllProperties = getAllProperties;
  * @return {Promise<{}>} A promise to the property.
  */
 // refactored code #6
+const addProperty = function(property) {
+  const {
+    owner_id,
+    title,
+    description,
+    thumbnail_photo_url,
+    cover_photo_url,
+    cost_per_night,
+    parking_spaces,
+    number_of_bathrooms,
+    number_of_bedrooms,
+    country,
+    street,
+    city,
+    province,
+    post_code 
+  } = property;
+
+  const queryString = `
+    INSERT INTO properties (    
+      owner_id,
+      title,
+      description,
+      thumbnail_photo_url,
+      cover_photo_url,
+      cost_per_night,
+      parking_spaces,
+      number_of_bathrooms,
+      number_of_bedrooms,
+      country,
+      street,
+      city,
+      province,
+      post_code)
+    VALUES(
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+    ) RETURNING *;
+    `;
+
+  const queryParams = [
+    owner_id,
+    title,
+    description,
+    thumbnail_photo_url,
+    cover_photo_url,
+    cost_per_night,
+    parking_spaces,
+    number_of_bathrooms,
+    number_of_bedrooms,
+    country,
+    street,
+    city,
+    province,
+    post_code
+  ];
+
+  return pool.query(queryString, queryParams)
+    .then(result => result.rows[0])
+    .catch(err => console.log(err.message));
+};
 
 
 // old code #6 of 6
-const addProperty = function(property) {
-  const propertyId = Object.keys(properties).length + 1;
-  property.id = propertyId;
-  properties[propertyId] = property;
-  return Promise.resolve(property);
-};
-exports.addProperty = addProperty;
+// const addProperty = function(property) {
+//   const propertyId = Object.keys(properties).length + 1;
+//   property.id = propertyId;
+//   properties[propertyId] = property;
+//   return Promise.resolve(property);
+// };
+exports.addProperty = addProperty;;;;;
